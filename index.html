@@ -18,26 +18,24 @@
             overflow-x: hidden; position: relative;
         }
         @keyframes galaxyMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        #galaxy-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
         .galaxy-card { background: rgba(16, 25, 45, 0.75); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 24px; backdrop-filter: blur(15px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); position: relative; z-index: 10; }
         #music-control { position: fixed; bottom: 20px; right: 20px; z-index: 100; width: 50px; height: 50px; border-radius: 50%; background: rgba(234, 179, 8, 0.2); border: 2px solid #eab308; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
         .music-playing { animation: pulse-yellow 2s infinite; }
         input { background: rgba(255, 255, 255, 0.07) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 12px; padding: 14px; color: white; width: 100%; margin-bottom: 12px; outline: none; }
         input:focus { border-color: #eab308 !important; }
         .glow-text { text-shadow: 0 0 20px rgba(234, 179, 8, 0.6); }
+        @keyframes pulse-yellow { 0% { transform: scale(1); } 50% { transform: scale(1.1); box-shadow: 0 0 20px #eab308; } 100% { transform: scale(1); } }
     </style>
 </head>
 <body class="p-4 md:p-8">
     <audio id="bg-music" loop><source src="music.mp3" type="audio/mpeg"></audio>
     <div id="music-control" onclick="toggleMusic()"><span id="music-icon" style="font-size: 24px;">🔇</span></div>
-    <canvas id="galaxy-canvas"></canvas>
 
     <div class="max-w-4xl mx-auto relative z-10">
         <header class="text-center mb-6">
             <h1 class="text-6xl font-black text-yellow-400 mb-2 italic uppercase tracking-tighter glow-text">CAPTAIN BOY</h1>
             <p class="text-blue-300 text-[10px] tracking-[0.5em] font-bold mb-6 uppercase">✨ SOCIAL CHIẾN TÍCH ✨</p>
             
-            <!-- VỊ TRÍ LỜI NHẮN (KHUNG ĐỎ ẢNH 1) -->
             <div id="main-announcement" class="hidden max-w-2xl mx-auto mb-8">
                 <div class="galaxy-card p-4 border border-yellow-500/50 bg-yellow-500/10 text-center shadow-lg shadow-yellow-500/10">
                     <p id="announcement-text" class="text-yellow-400 font-bold italic tracking-wide text-sm"></p>
@@ -62,7 +60,7 @@
                 <div id="report-box">
                     <input type="text" id="name" placeholder="Tên acc Cừu cmt ">
                     <input type="text" id="account" placeholder="Tên bài Cừu đã cmt">
-                    <input type="number" id="quantity" placeholder="Số lượng cmt đã thực hiện đầy đủ hashtag/keywords">
+                    <input type="number" id="quantity" placeholder="Số lượng cmt thực hiện">
                     <button onclick="sendReport()" id="btn-send" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-4 rounded-xl mt-4 uppercase transition-all">GỬI CHIẾN TÍCH</button>
                 </div>
                 <div id="success-msg" class="hidden text-yellow-400 font-bold py-4">✨ ĐÃ GHI NHẬN VÀO VŨ TRỤ! ✨</div>
@@ -86,8 +84,9 @@
         const musicIcon = document.getElementById('music-icon');
         function toggleMusic() { if (music.paused) { music.play(); musicIcon.innerText = "🔊"; musicBtn.classList.add('music-playing'); } else { music.pause(); musicIcon.innerText = "🔇"; musicBtn.classList.remove('music-playing'); } }
         
-        // --- DỮ LIỆU ---
+        // --- THAY URL CỦA BẠN VÀO ĐÂY ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOsYvhB2uA2-AXNJz08XRQCvTRsTslfVyD9Skpzg1CCOZu4zgyHrJVcxwF2bjNhfV0/exec";
+        
         let allPosts = [];
         let chart1, chart2;
 
@@ -95,16 +94,10 @@
             try {
                 const res = await fetch(SCRIPT_URL);
                 const data = await res.json();
-                console.log("Dữ liệu nhận được:", data); // Kiểm tra log để xem có "note" không
-
-                // HIỂN THỊ LỜI NHẮN
-                if (data.note && data.note !== "") {
+                if (data.note) {
                     document.getElementById('announcement-text').innerText = "📢 " + data.note;
                     document.getElementById('main-announcement').classList.remove('hidden');
-                } else {
-                    document.getElementById('main-announcement').classList.add('hidden');
                 }
-
                 allPosts = data.posts;
                 updateCharts(data.stats);
                 render(allPosts);
@@ -124,7 +117,7 @@
         function render(data) {
             const list = document.getElementById('post-list');
             list.innerHTML = data.map(item => {
-                const hasLink = item.content && item.content.toString().trim() !== "" && item.content.toString().startsWith("http");
+                const hasLink = item.content && item.content.toString().startsWith("http");
                 const templateBtn = hasLink 
                     ? `<a href="${item.content}" target="_blank" class="bg-white/10 text-white font-bold py-4 rounded-xl text-center text-xs uppercase border border-white/20">VĂN MẪU</a>`
                     : `<div class="bg-gray-800/40 text-gray-500 font-bold py-4 rounded-xl text-center text-[10px] uppercase border border-gray-700 opacity-50">KHÔNG CÓ VĂN MẪU</div>`;
@@ -136,11 +129,56 @@
                 </div>`;
             }).join('');
         }
+        
         function filter(p) { render(p === 'All' ? allPosts : allPosts.filter(x => x.platform === p)); }
-        async function sendReport() {}
+
+        // --- HÀM GỬI DỮ LIỆU ĐÃ SỬA ---
+        async function sendReport() {
+            const name = document.getElementById('name').value;
+            const account = document.getElementById('account').value;
+            const quantity = document.getElementById('quantity').value;
+            const btn = document.getElementById('btn-send');
+
+            if (!name || !account || !quantity) {
+                alert("Vui lòng nhập đầy đủ thông tin!");
+                return;
+            }
+
+            btn.innerText = "ĐANG GỬI...";
+            btn.disabled = true;
+
+            try {
+                // Sử dụng mode 'no-cors' để tránh lỗi CORS từ phía trình duyệt
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, account, quantity })
+                });
+
+                // Hiển thị thành công
+                document.getElementById('report-box').classList.add('hidden');
+                document.getElementById('success-msg').classList.remove('hidden');
+
+                // Reset form sau 3 giây
+                setTimeout(() => {
+                    document.getElementById('report-box').classList.remove('hidden');
+                    document.getElementById('success-msg').classList.add('hidden');
+                    document.getElementById('name').value = "";
+                    document.getElementById('account').value = "";
+                    document.getElementById('quantity').value = "";
+                    btn.innerText = "GỬI CHIẾN TÍCH";
+                    btn.disabled = false;
+                }, 3000);
+
+            } catch (e) {
+                alert("Gửi thất bại, thử lại sau!");
+                btn.innerText = "GỬI CHIẾN TÍCH";
+                btn.disabled = false;
+            }
+        }
         
         init();
-        // Hiệu ứng sao bay (tắt để code gọn)
     </script>
 </body>
 </html>
